@@ -5,20 +5,25 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
-      PORT: 3000
+      # ── Required: set these in Coolify's Environment Variables UI ──
+      PUBLIC_URL: ${PUBLIC_URL}
       TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID}
       TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET}
       SESSION_SECRET: ${SESSION_SECRET}
-      DATABASE_URL: postgresql://tts:${POSTGRES_PASSWORD:-tts}@postgres:5432/tts?schema=public
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # ── Internal wiring (do not need to change) ──
+      PORT: "3000"
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: tts
+      POSTGRES_DB: tts
       PIPER_URL: http://piper:5000
-      DEFAULT_VOICE: ${DEFAULT_VOICE:-en_US-amy-medium}
-      PIPER_VOICES: ${PIPER_VOICES:-en_US-amy-medium,en_US-ryan-high,en_GB-alba-medium}
+      DEFAULT_VOICE: en_US-amy-medium
+      PIPER_VOICES: en_US-amy-medium,en_US-ryan-high,en_GB-alba-medium
       AUDIO_CACHE_DIR: /data/audio-cache
-      AUDIO_TTL_SECONDS: ${AUDIO_TTL_SECONDS:-900}
+      AUDIO_TTL_SECONDS: "900"
       NODE_ENV: production
     ports:
-      - "${PORT:-3000}:3000"
+      - "3000:3000"
     volumes:
       - audio-cache:/data/audio-cache
     depends_on:
@@ -33,8 +38,8 @@ services:
     restart: unless-stopped
     environment:
       DATA_DIR: /data
-      DEFAULT_VOICE: ${DEFAULT_VOICE:-en_US-amy-medium}
-      PIPER_VOICES: ${PIPER_VOICES:-en_US-amy-medium,en_US-ryan-high,en_GB-alba-medium}
+      DEFAULT_VOICE: en_US-amy-medium
+      PIPER_VOICES: en_US-amy-medium,en_US-ryan-high,en_GB-alba-medium
     volumes:
       - piper-voices:/data
 
@@ -43,7 +48,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: tts
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tts}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: tts
     volumes:
       - postgres-data:/var/lib/postgresql/data

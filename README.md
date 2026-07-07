@@ -61,19 +61,20 @@ Coolify watches your GitHub repo and rebuilds on every push.
 2. In Coolify: **New Resource → Docker Compose**, and select your repo/branch.
    Coolify installs a GitHub webhook so every push redeploys automatically.
 3. Set a **Domain** for the `app` service (Coolify's proxy terminates TLS).
-4. Add these **Environment Variables** (Coolify → your resource → Environment):
+4. Add these **Environment Variables** in Coolify (→ your resource → Environment
+   Variables). All five are **required** — Coolify injects them into the container:
 
    | Variable               | Value                                                    |
    | ---------------------- | -------------------------------------------------------- |
-   | `PUBLIC_URL`           | `https://twitchtts.alfi3.com` (no trailing slash)                |
+   | `PUBLIC_URL`           | `https://twitchtts.alfi3.com` (no trailing slash)        |
    | `TWITCH_CLIENT_ID`     | from step 1                                               |
    | `TWITCH_CLIENT_SECRET` | from step 1                                               |
    | `SESSION_SECRET`       | long random string — `openssl rand -hex 32`              |
-   | `POSTGRES_PASSWORD`    | any strong password                                      |
-   | `DEFAULT_VOICE`        | e.g. `en_US-amy-medium` (optional)                       |
-   | `PIPER_VOICES`         | comma list to pre-download (optional)                    |
+   | `POSTGRES_PASSWORD`    | a strong password (Postgres won't start without it)      |
 
-   `DATABASE_URL` and `PIPER_URL` are wired automatically inside the compose file.
+   `DATABASE_URL` is derived automatically from `POSTGRES_PASSWORD` at boot, and
+   `PIPER_URL` / voices are preset in the compose file. To change voices, edit
+   `DEFAULT_VOICE` / `PIPER_VOICES` in `docker-compose.yaml`.
 
 5. Deploy. First boot downloads the Piper voices into the `piper-voices` volume
    (this can take a minute). `postgres-data`, `piper-voices`, and `audio-cache`
