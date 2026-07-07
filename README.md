@@ -44,7 +44,7 @@ Three containers:
 
 1. Go to <https://dev.twitch.tv/console/apps> → **Register Your Application**.
 2. **OAuth Redirect URL** must be exactly:
-   `https://YOUR_DOMAIN/auth/twitch/callback`
+   `https://twitchtts.alfi3.com/auth/twitch/callback`
    (for local testing: `http://localhost:3000/auth/twitch/callback`)
 3. Category: *Website Integration*. Create it, then copy the **Client ID** and
    generate a **Client Secret**.
@@ -65,7 +65,7 @@ Coolify watches your GitHub repo and rebuilds on every push.
 
    | Variable               | Value                                                    |
    | ---------------------- | -------------------------------------------------------- |
-   | `PUBLIC_URL`           | `https://YOUR_DOMAIN` (no trailing slash)                |
+   | `PUBLIC_URL`           | `https://twitchtts.alfi3.com` (no trailing slash)                |
    | `TWITCH_CLIENT_ID`     | from step 1                                               |
    | `TWITCH_CLIENT_SECRET` | from step 1                                               |
    | `SESSION_SECRET`       | long random string — `openssl rand -hex 32`              |
@@ -79,7 +79,7 @@ Coolify watches your GitHub repo and rebuilds on every push.
    (this can take a minute). `postgres-data`, `piper-voices`, and `audio-cache`
    persist across redeploys.
 
-Open `https://YOUR_DOMAIN` and log in with Twitch.
+Open `https://twitchtts.alfi3.com` and log in with Twitch.
 
 ---
 
@@ -143,7 +143,7 @@ The `piper` service downloads any that are missing on boot.
 
 ## Verifying a deploy
 
-- **Health:** `GET https://YOUR_DOMAIN/healthz` → `{"ok":true,"piper":true}`.
+- **Health:** `GET https://twitchtts.alfi3.com/healthz` → `{"ok":true,"piper":true}`.
   `piper:false` means the piper service isn't reachable/ready yet.
 - **TTS path:** open the overlay URL in a normal browser tab (click once to allow
   audio), then hit **Speak** on the dashboard → you hear it.
