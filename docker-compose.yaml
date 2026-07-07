@@ -1,0 +1,59 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:3000}
+      PORT: 3000
+      TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID}
+      TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET}
+      SESSION_SECRET: ${SESSION_SECRET}
+      DATABASE_URL: postgresql://tts:${POSTGRES_PASSWORD:-tts}@postgres:5432/tts?schema=public
+      PIPER_URL: http://piper:5000
+      DEFAULT_VOICE: ${DEFAULT_VOICE:-en_US-amy-medium}
+      PIPER_VOICES: ${PIPER_VOICES:-en_US-amy-medium,en_US-ryan-high,en_GB-alba-medium}
+      AUDIO_CACHE_DIR: /data/audio-cache
+      AUDIO_TTL_SECONDS: ${AUDIO_TTL_SECONDS:-900}
+      NODE_ENV: production
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - audio-cache:/data/audio-cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      piper:
+        condition: service_started
+
+  piper:
+    build:
+      context: ./docker/piper
+    restart: unless-stopped
+    environment:
+      DATA_DIR: /data
+      DEFAULT_VOICE: ${DEFAULT_VOICE:-en_US-amy-medium}
+      PIPER_VOICES: ${PIPER_VOICES:-en_US-amy-medium,en_US-ryan-high,en_GB-alba-medium}
+    volumes:
+      - piper-voices:/data
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tts
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tts}
+      POSTGRES_DB: tts
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tts"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  audio-cache:
+  piper-voices:
+  postgres-data:

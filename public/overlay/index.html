@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TTS Overlay</title>
+    <style>
+      :root {
+        --caption-bg: rgba(15, 16, 25, 0.82);
+        --caption-fg: #ffffff;
+        --accent: #a970ff;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      }
+      #caption {
+        position: fixed;
+        left: 50%;
+        bottom: 6%;
+        transform: translateX(-50%) translateY(12px);
+        max-width: 80vw;
+        padding: 14px 22px;
+        border-radius: 14px;
+        background: var(--caption-bg);
+        color: var(--caption-fg);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+        opacity: 0;
+        transition: opacity 0.18s ease, transform 0.18s ease;
+        pointer-events: none;
+        line-height: 1.35;
+      }
+      #caption.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+      #caption .name {
+        color: var(--accent);
+        font-weight: 700;
+        margin-right: 8px;
+      }
+      #caption .text {
+        font-weight: 500;
+      }
+      #enable {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.55);
+        color: #fff;
+        font-size: 20px;
+        cursor: pointer;
+        z-index: 10;
+      }
+      #enable.show {
+        display: flex;
+      }
+      #enable span {
+        padding: 16px 26px;
+        border: 2px solid var(--accent);
+        border-radius: 12px;
+        background: rgba(20, 20, 30, 0.9);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="caption"><span class="name"></span><span class="text"></span></div>
+    <div id="enable"><span>🔊 Click to enable audio</span></div>
+    <script src="overlay.js"></script>
+  </body>
+</html>

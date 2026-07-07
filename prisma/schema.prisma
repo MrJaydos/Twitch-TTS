@@ -1,0 +1,62 @@
+// Prisma schema for Twitch TTS.
+// Postgres in production/compose; see DATABASE_URL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  twitchId     String    @unique
+  login        String
+  displayName  String
+  // Secret embedded in the OBS overlay URL. Rotatable from the dashboard.
+  overlayToken String    @unique @default(cuid())
+  createdAt    DateTime  @default(now())
+  settings     Settings?
+}
+
+model Settings {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Which Twitch channel's chat to read (lowercase login, no leading #).
+  channel String  @default("")
+  enabled Boolean @default(true)
+
+  // Trigger: "all" reads every message; "prefix" only messages starting with `prefix`.
+  triggerMode String @default("all")
+  prefix      String @default("!tts")
+
+  // Role gate: "everyone" | "subs" | "vips" | "mods".
+  roleGate String @default("everyone")
+
+  // Voice + playback.
+  voice  String @default("en_US-amy-medium")
+  rate   Float  @default(1.0)
+  volume Float  @default(1.0)
+
+  // Content shaping.
+  maxLength    Int     @default(300)
+  readUsername Boolean @default(false)
+  stripUrls    Boolean @default(true)
+  stripEmotes  Boolean @default(true)
+
+  // Rate limiting.
+  cooldownSeconds Int @default(0)
+
+  // Filtering. Lists are newline/comma separated to stay DB-portable.
+  ignoreList    String @default("")
+  blocklist     String @default("")
+  blocklistMode String @default("skip") // "skip" | "censor"
+
+  // Overlay presentation.
+  captionsEnabled Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+}

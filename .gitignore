@@ -1,0 +1,11 @@
+node_modules/
+dist/
+web/dist/
+web/node_modules/
+.env
+.env.local
+*.log
+audio-cache/
+voices/
+data/
+.DS_Store

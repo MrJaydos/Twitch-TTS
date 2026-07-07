@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Twitch TTS — Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <!-- Login view -->
+    <main id="login" class="login hidden">
+      <div class="login-card">
+        <div class="brand-mark">🔊</div>
+        <h1>Twitch TTS</h1>
+        <p class="muted">
+          Read your Twitch chat aloud through an OBS browser source. Log in to
+          configure your channel, voice, and filters.
+        </p>
+        <a class="btn btn-accent btn-lg" href="/auth/twitch">Log in with Twitch</a>
+      </div>
+    </main>
+
+    <!-- App view -->
+    <div id="app" class="app hidden">
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark sm">🔊</span> Twitch TTS</div>
+        <div class="topbar-right">
+          <span id="whoami" class="muted"></span>
+          <button id="logout" class="btn btn-ghost">Log out</button>
+        </div>
+      </header>
+
+      <main class="grid">
+        <!-- Browser source -->
+        <section class="card span-2">
+          <div class="card-head">
+            <h2>Browser source</h2>
+          </div>
+          <p class="muted">
+            Add this as a <strong>Browser Source</strong> in OBS, then enable
+            “Control audio via OBS”. Keep the URL private — anyone with it controls your overlay.
+          </p>
+          <div class="row">
+            <input id="overlay-url" class="input mono" readonly />
+            <button id="copy-url" class="btn">Copy</button>
+            <button id="regen-url" class="btn btn-danger-ghost">Regenerate</button>
+          </div>
+        </section>
+
+        <!-- Controls -->
+        <section class="card">
+          <div class="card-head"><h2>Controls</h2></div>
+          <label class="field-label" for="test-text">Test message</label>
+          <div class="row">
+            <input id="test-text" class="input" placeholder="Hello from the dashboard" />
+            <button id="test-send" class="btn btn-accent">Speak</button>
+          </div>
+          <div class="row gap">
+            <button id="skip" class="btn">Skip current</button>
+            <button id="clear" class="btn">Clear queue</button>
+          </div>
+          <p class="hint muted">Controls act on any connected overlay for your account.</p>
+        </section>
+
+        <!-- Activity -->
+        <section class="card">
+          <div class="card-head"><h2>Activity</h2></div>
+          <ul id="activity" class="activity">
+            <li class="muted empty">Waiting for chat…</li>
+          </ul>
+        </section>
+
+        <!-- Settings -->
+        <section class="card span-2">
+          <div class="card-head">
+            <h2>Settings</h2>
+            <label class="switch">
+              <input type="checkbox" id="enabled" />
+              <span class="slider"></span>
+              <span class="switch-label">Enabled</span>
+            </label>
+          </div>
+
+          <div class="settings-grid">
+            <div class="field">
+              <label class="field-label" for="channel">Twitch channel</label>
+              <input id="channel" class="input" placeholder="your_channel" />
+              <span class="hint muted">The chat to read. Defaults to your own channel.</span>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="voice">Voice</label>
+              <select id="voice" class="input"></select>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="triggerMode">Trigger</label>
+              <select id="triggerMode" class="input">
+                <option value="all">Read every message</option>
+                <option value="prefix">Only messages starting with a prefix</option>
+              </select>
+            </div>
+
+            <div class="field" id="prefix-field">
+              <label class="field-label" for="prefix">Prefix</label>
+              <input id="prefix" class="input" placeholder="!tts" />
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="roleGate">Who can trigger TTS</label>
+              <select id="roleGate" class="input">
+                <option value="everyone">Everyone</option>
+                <option value="subs">Subscribers &amp; above</option>
+                <option value="vips">VIPs &amp; above</option>
+                <option value="mods">Moderators only</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="cooldownSeconds">Per-user cooldown (seconds)</label>
+              <input id="cooldownSeconds" class="input" type="number" min="0" max="3600" />
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="rate">Speed <span id="rate-val" class="tag"></span></label>
+              <input id="rate" class="range" type="range" min="0.3" max="2" step="0.05" />
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="volume">Volume <span id="volume-val" class="tag"></span></label>
+              <input id="volume" class="range" type="range" min="0" max="1" step="0.05" />
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="maxLength">Max message length</label>
+              <input id="maxLength" class="input" type="number" min="0" max="2000" />
+            </div>
+
+            <div class="field">
+              <label class="field-label" for="blocklistMode">Blocked words</label>
+              <select id="blocklistMode" class="input">
+                <option value="skip">Skip the whole message</option>
+                <option value="censor">Censor the words (***)</option>
+              </select>
+            </div>
+
+            <div class="field span-full">
+              <label class="field-label" for="blocklist">Blocked words (comma or newline separated)</label>
+              <textarea id="blocklist" class="input" rows="2"></textarea>
+            </div>
+
+            <div class="field span-full">
+              <label class="field-label" for="ignoreList">Ignored users (bots, comma or newline separated)</label>
+              <textarea id="ignoreList" class="input" rows="2"></textarea>
+            </div>
+
+            <div class="toggles span-full">
+              <label class="check"><input type="checkbox" id="readUsername" /> Read the username (“Bob says: …”)</label>
+              <label class="check"><input type="checkbox" id="stripUrls" /> Skip links in messages</label>
+              <label class="check"><input type="checkbox" id="stripEmotes" /> Skip emotes</label>
+              <label class="check"><input type="checkbox" id="captionsEnabled" /> Show on-screen captions</label>
+            </div>
+          </div>
+
+          <div class="card-foot">
+            <span id="save-status" class="muted"></span>
+            <button id="save" class="btn btn-accent">Save settings</button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>
