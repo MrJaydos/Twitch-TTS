@@ -62,7 +62,7 @@ Coolify watches your GitHub repo and rebuilds on every push.
    Coolify installs a GitHub webhook so every push redeploys automatically.
 3. Set a **Domain** for the `app` service (Coolify's proxy terminates TLS).
 4. Add these **Environment Variables** in Coolify (→ your resource → Environment
-   Variables). All five are **required** — Coolify injects them into the container:
+   Variables). All four are **required** — Coolify injects them into the app:
 
    | Variable               | Value                                                    |
    | ---------------------- | -------------------------------------------------------- |
@@ -70,11 +70,10 @@ Coolify watches your GitHub repo and rebuilds on every push.
    | `TWITCH_CLIENT_ID`     | from step 1                                               |
    | `TWITCH_CLIENT_SECRET` | from step 1                                               |
    | `SESSION_SECRET`       | long random string — `openssl rand -hex 32`              |
-   | `POSTGRES_PASSWORD`    | a strong password (Postgres won't start without it)      |
 
-   `DATABASE_URL` is derived automatically from `POSTGRES_PASSWORD` at boot, and
-   `PIPER_URL` / voices are preset in the compose file. To change voices, edit
-   `DEFAULT_VOICE` / `PIPER_VOICES` in `docker-compose.yaml`.
+   The Postgres credentials, `DATABASE_URL`, `PIPER_URL`, and voices are all
+   preset in `docker-compose.yaml` (Postgres is internal-only, not exposed). To
+   change voices, edit `DEFAULT_VOICE` / `PIPER_VOICES` there.
 
 5. Deploy. First boot downloads the Piper voices into the `piper-voices` volume
    (this can take a minute). `postgres-data`, `piper-voices`, and `audio-cache`
@@ -159,13 +158,11 @@ The `piper` service downloads any that are missing on boot.
 
 ## Troubleshooting
 
-- **`P1000: Authentication failed against database server`** — Postgres sets its
-  password only on **first init**. If the `postgres-data` volume was created with a
-  different password, changing `POSTGRES_PASSWORD` later won't take effect. Stop the
-  stack, delete the `postgres-data` volume (Coolify → Storages, or
-  `docker volume rm <name>`), then redeploy. Safe if you have no real data yet.
-- **`Environment variable not found: DATABASE_URL`** — make sure `POSTGRES_PASSWORD`
-  is set in Coolify's Environment Variables. `DATABASE_URL` is derived from it at boot.
+- **`P1000: Authentication failed against database server`** — Postgres bakes its
+  password in on **first init**, so if you change the DB password you must also start
+  from a fresh volume. The compose ships a fixed internal password and a versioned
+  volume name (`pgdata2`) for exactly this reason. If you ever change the password,
+  bump the volume name too (e.g. `pgdata3`) so it re-initializes.
 - **`/healthz` shows `"piper": false`** — the piper service is still downloading
   voices on first boot (can take a minute) or hasn't started yet. Give it a moment.
 

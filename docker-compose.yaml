@@ -10,12 +10,15 @@ services:
       TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID}
       TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET}
       SESSION_SECRET: ${SESSION_SECRET}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      # ── Internal wiring (do not need to change) ──
+      # ── Internal wiring — Postgres has NO exposed ports, so this fixed
+      #    internal password is only reachable inside the compose network.
+      #    The app derives DATABASE_URL from these at boot. Both the app and
+      #    the postgres service MUST use the same POSTGRES_PASSWORD literal.
       PORT: "3000"
       POSTGRES_HOST: postgres
       POSTGRES_USER: tts
       POSTGRES_DB: tts
+      POSTGRES_PASSWORD: tts_internal_pw
       PIPER_URL: http://piper:5000
       DEFAULT_VOICE: en_US-amy-medium
       PIPER_VOICES: en_US-amy-medium,en_US-ryan-high,en_GB-alba-medium
@@ -48,10 +51,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: tts
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: tts_internal_pw
       POSTGRES_DB: tts
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata2:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U tts"]
       interval: 5s
@@ -61,4 +64,4 @@ services:
 volumes:
   audio-cache:
   piper-voices:
-  pgdata:
+  pgdata2:
