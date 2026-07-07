@@ -13,11 +13,16 @@ FROM node:20-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-# OpenSSL is required by the Prisma query engine; without it Prisma
-# misdetects libssl and the engine fails to load at runtime.
+# System deps:
+#  - openssl/ca-certificates: required by the Prisma query engine
+#  - python3/pip + espeak-ng: run the bundled Piper TTS HTTP server in-container
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && apt-get install -y --no-install-recommends \
+       openssl ca-certificates python3 python3-pip espeak-ng \
   && rm -rf /var/lib/apt/lists/*
+
+# Piper TTS with the HTTP server extras (served on 127.0.0.1:5000 at runtime).
+RUN pip install --no-cache-dir --break-system-packages "piper-tts[http]"
 
 # Only production deps (includes the prisma CLI for db push at boot).
 COPY package.json ./

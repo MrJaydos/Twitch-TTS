@@ -1,3 +1,7 @@
+# Local / self-hosted compose. Piper TTS is bundled inside the app image, so the
+# only services are the app and a Postgres for local use. On platforms that only
+# run a single service (e.g. Coolify treating this as a Dockerfile app), just run
+# the app image and provide DATABASE_URL for a managed/separate Postgres.
 services:
   app:
     build:
@@ -5,57 +9,45 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      # ── Required: set these in Coolify's Environment Variables UI ──
+      # ── Required ──
       PUBLIC_URL: ${PUBLIC_URL}
       TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID}
       TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET}
       SESSION_SECRET: ${SESSION_SECRET}
-      # ── Internal wiring — the DB service (ttsdb) has NO exposed ports and
-      #    uses trust auth, so the password below is not actually checked.
-      #    The app derives DATABASE_URL from these values at boot.
-      PORT: "3000"
+      # ── Database ──
+      # Set DATABASE_URL to use a managed/separate Postgres. If unset, the app
+      # derives one from the bundled ttsdb service below.
+      DATABASE_URL: ${DATABASE_URL:-}
       POSTGRES_HOST: ttsdb
       POSTGRES_USER: tts
       POSTGRES_DB: tts
-      POSTGRES_PASSWORD: tts_internal_pw
-      PIPER_URL: http://piper:5000
+      # ── Bundled Piper (runs on 127.0.0.1:5000 inside the container) ──
+      PIPER_URL: http://127.0.0.1:5000
+      PIPER_DATA_DIR: /data/piper-voices
       DEFAULT_VOICE: en_US-amy-medium
       PIPER_VOICES: en_US-amy-medium,en_US-ryan-high,en_GB-alba-medium
+      # ── Misc ──
+      PORT: "3000"
       AUDIO_CACHE_DIR: /data/audio-cache
       AUDIO_TTL_SECONDS: "900"
       NODE_ENV: production
     ports:
       - "3000:3000"
     volumes:
-      - audio-cache:/data/audio-cache
+      # Holds Piper voices + generated audio; persist to keep voices between deploys.
+      - appdata:/data
     depends_on:
       ttsdb:
         condition: service_healthy
-      piper:
-        condition: service_started
 
-  piper:
-    build:
-      context: ./docker/piper
-    restart: unless-stopped
-    environment:
-      DATA_DIR: /data
-      DEFAULT_VOICE: en_US-amy-medium
-      PIPER_VOICES: en_US-amy-medium,en_US-ryan-high,en_GB-alba-medium
-    volumes:
-      - piper-voices:/data
-
-  # Named 'ttsdb' (not 'postgres') so the app never resolves to a stale
-  # orphaned postgres container left behind by earlier deploys.
+  # Bundled Postgres for local/standalone use. Not needed if you set DATABASE_URL
+  # to a managed database. Trust auth on the internal-only network.
   ttsdb:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: tts
       POSTGRES_DB: tts
-      # No exposed ports — only reachable by the app over the internal compose
-      # network. Trust auth accepts the connection regardless of the password
-      # the app sends, sidestepping platform env-injection mismatches entirely.
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - pgdata3:/var/lib/postgresql/data
@@ -66,6 +58,5 @@ services:
       retries: 10
 
 volumes:
-  audio-cache:
-  piper-voices:
+  appdata:
   pgdata3:

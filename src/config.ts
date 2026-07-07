@@ -13,7 +13,7 @@ const schema = z.object({
 
   DATABASE_URL: z.string().min(1),
 
-  PIPER_URL: z.string().url().default('http://piper:5000'),
+  PIPER_URL: z.string().url().default('http://127.0.0.1:5000'),
   DEFAULT_VOICE: z.string().default('en_US-amy-medium'),
   PIPER_VOICES: z.string().default('en_US-amy-medium'),
 

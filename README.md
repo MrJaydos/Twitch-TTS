@@ -26,13 +26,16 @@ app reads chat anonymously (justinfan, no token needed)
 Overlay plays audio in order (+ optional on-screen captions)
 ```
 
-Three containers:
+The **app image bundles Piper** (it runs a Piper HTTP server on `127.0.0.1:5000`
+inside the same container), so deployment is just:
 
-| Service    | Role                                                                    |
-| ---------- | ----------------------------------------------------------------------- |
-| `app`      | Node/Fastify: dashboard, overlay, API, WebSockets, chat reader, TTS queue |
-| `piper`    | Piper HTTP server; synthesizes speech. Voices persist on a volume.      |
-| `postgres` | User accounts + settings.                                               |
+| Component  | Role                                                                       |
+| ---------- | -------------------------------------------------------------------------- |
+| `app`      | Node/Fastify + bundled Piper: dashboard, overlay, API, WebSockets, chat reader, TTS |
+| Postgres   | User accounts + settings. Use a managed/separate DB via `DATABASE_URL`.    |
+
+Bundling Piper keeps everything in one container, which is the most reliable
+setup on platforms (like Coolify) that deploy a single service per resource.
 
 > **Why server-side audio?** OBS browser sources run an embedded Chromium that
 > usually has **no** speech-synthesis voices, so the browser's `speechSynthesis`
@@ -55,14 +58,21 @@ You can add more redirect URLs later (e.g. one for local dev and one for prod).
 
 ## 2. Deploy on Coolify (recommended)
 
-Coolify watches your GitHub repo and rebuilds on every push.
+Coolify deploys one service per resource, so run the app as a **Dockerfile app**
+plus a **managed Postgres** — no multi-service compose needed.
 
 1. Push this repo to GitHub.
-2. In Coolify: **New Resource → Docker Compose**, and select your repo/branch.
-   Coolify installs a GitHub webhook so every push redeploys automatically.
-3. Set a **Domain** for the `app` service (Coolify's proxy terminates TLS).
-4. Add these **Environment Variables** in Coolify (→ your resource → Environment
-   Variables). All four are **required** — Coolify injects them into the app:
+2. **Create the database:** New Resource → **Database → PostgreSQL** (same
+   Project/Server as the app). Start it, and copy its **internal** connection URL
+   (looks like `postgresql://postgres:PW@internalhost:5432/postgres`).
+3. **Create the app:** New Resource → **Application** from your repo. Build Pack:
+   **Dockerfile** (root `Dockerfile`). Coolify installs a webhook so every push
+   redeploys automatically.
+4. Set a **Domain** for the app (Coolify's proxy terminates TLS), routing to
+   port **3000**.
+5. Add a **Persistent Storage** volume mounted at **`/data`** (holds Piper voices
+   + the audio cache, so voices aren't re-downloaded on every deploy).
+6. Add these **Environment Variables** (all required):
 
    | Variable               | Value                                                    |
    | ---------------------- | -------------------------------------------------------- |
@@ -70,14 +80,16 @@ Coolify watches your GitHub repo and rebuilds on every push.
    | `TWITCH_CLIENT_ID`     | from step 1                                               |
    | `TWITCH_CLIENT_SECRET` | from step 1                                               |
    | `SESSION_SECRET`       | long random string — `openssl rand -hex 32`              |
+   | `DATABASE_URL`         | the managed Postgres internal URL from step 2            |
 
-   The Postgres credentials, `DATABASE_URL`, `PIPER_URL`, and voices are all
-   preset in `docker-compose.yaml` (Postgres is internal-only, not exposed). To
-   change voices, edit `DEFAULT_VOICE` / `PIPER_VOICES` there.
+   Piper runs **inside** the container (`PIPER_URL` defaults to `127.0.0.1:5000`),
+   so no separate service is needed. To change voices, set `DEFAULT_VOICE` /
+   `PIPER_VOICES`.
 
-5. Deploy. First boot downloads the Piper voices into the `piper-voices` volume
-   (this can take a minute). `postgres-data`, `piper-voices`, and `audio-cache`
-   persist across redeploys.
+7. Deploy. First boot downloads the Piper voices into `/data` (can take a minute).
+
+> The bundled `ttsdb` service in `docker-compose.yaml` is only for local
+> `docker compose up`; on Coolify you use the managed Postgres from step 2.
 
 Open `https://twitchtts.alfi3.com` and log in with Twitch.
 
