@@ -158,11 +158,12 @@ The `piper` service downloads any that are missing on boot.
 
 ## Troubleshooting
 
-- **`P1000: Authentication failed against database server`** — Postgres bakes its
-  password in on **first init**, so if you change the DB password you must also start
-  from a fresh volume. The compose ships a fixed internal password and a versioned
-  volume name (`pgdata2`) for exactly this reason. If you ever change the password,
-  bump the volume name too (e.g. `pgdata3`) so it re-initializes.
+- **`P1000: Authentication failed against database server`** — the bundled Postgres
+  uses **trust auth** on the internal-only network, so passwords aren't checked and
+  this shouldn't occur. If it does, an old Postgres volume is likely in play: bump the
+  volume name in `docker-compose.yaml` (e.g. `pgdata3` → `pgdata4`) so it
+  re-initializes, and remove any `POSTGRES_PASSWORD` / `DATABASE_URL` you set in the
+  platform's env UI (they're not needed and can interfere).
 - **`/healthz` shows `"piper": false`** — the piper service is still downloading
   voices on first boot (can take a minute) or hasn't started yet. Give it a moment.
 

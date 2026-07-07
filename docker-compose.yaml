@@ -51,10 +51,14 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: tts
-      POSTGRES_PASSWORD: tts_internal_pw
       POSTGRES_DB: tts
+      # Postgres has NO exposed ports — it is only reachable by the app over
+      # the internal compose network. Use trust auth so the connection is
+      # accepted regardless of what password the app sends. This avoids
+      # password-mismatch issues from platform env injection entirely.
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
-      - pgdata2:/var/lib/postgresql/data
+      - pgdata3:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U tts"]
       interval: 5s
@@ -64,4 +68,4 @@ services:
 volumes:
   audio-cache:
   piper-voices:
-  pgdata2:
+  pgdata3:
