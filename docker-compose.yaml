@@ -10,12 +10,11 @@ services:
       TWITCH_CLIENT_ID: ${TWITCH_CLIENT_ID}
       TWITCH_CLIENT_SECRET: ${TWITCH_CLIENT_SECRET}
       SESSION_SECRET: ${SESSION_SECRET}
-      # ── Internal wiring — Postgres has NO exposed ports, so this fixed
-      #    internal password is only reachable inside the compose network.
-      #    The app derives DATABASE_URL from these at boot. Both the app and
-      #    the postgres service MUST use the same POSTGRES_PASSWORD literal.
+      # ── Internal wiring — the DB service (ttsdb) has NO exposed ports and
+      #    uses trust auth, so the password below is not actually checked.
+      #    The app derives DATABASE_URL from these values at boot.
       PORT: "3000"
-      POSTGRES_HOST: postgres
+      POSTGRES_HOST: ttsdb
       POSTGRES_USER: tts
       POSTGRES_DB: tts
       POSTGRES_PASSWORD: tts_internal_pw
@@ -30,7 +29,7 @@ services:
     volumes:
       - audio-cache:/data/audio-cache
     depends_on:
-      postgres:
+      ttsdb:
         condition: service_healthy
       piper:
         condition: service_started
@@ -46,16 +45,17 @@ services:
     volumes:
       - piper-voices:/data
 
-  postgres:
+  # Named 'ttsdb' (not 'postgres') so the app never resolves to a stale
+  # orphaned postgres container left behind by earlier deploys.
+  ttsdb:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: tts
       POSTGRES_DB: tts
-      # Postgres has NO exposed ports — it is only reachable by the app over
-      # the internal compose network. Use trust auth so the connection is
-      # accepted regardless of what password the app sends. This avoids
-      # password-mismatch issues from platform env injection entirely.
+      # No exposed ports — only reachable by the app over the internal compose
+      # network. Trust auth accepts the connection regardless of the password
+      # the app sends, sidestepping platform env-injection mismatches entirely.
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - pgdata3:/var/lib/postgresql/data
