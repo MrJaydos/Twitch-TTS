@@ -157,6 +157,18 @@ The `piper` service downloads any that are missing on boot.
 
 ---
 
+## Troubleshooting
+
+- **`P1000: Authentication failed against database server`** — Postgres sets its
+  password only on **first init**. If the `postgres-data` volume was created with a
+  different password, changing `POSTGRES_PASSWORD` later won't take effect. Stop the
+  stack, delete the `postgres-data` volume (Coolify → Storages, or
+  `docker volume rm <name>`), then redeploy. Safe if you have no real data yet.
+- **`Environment variable not found: DATABASE_URL`** — make sure `POSTGRES_PASSWORD`
+  is set in Coolify's Environment Variables. `DATABASE_URL` is derived from it at boot.
+- **`/healthz` shows `"piper": false`** — the piper service is still downloading
+  voices on first boot (can take a minute) or hasn't started yet. Give it a moment.
+
 ## Local development (without Docker)
 
 Requires Node 20+ and a reachable Postgres and Piper server.
