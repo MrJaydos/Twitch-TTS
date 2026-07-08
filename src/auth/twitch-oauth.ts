@@ -33,12 +33,14 @@ export async function registerAuth(app: FastifyInstance): Promise<void> {
   });
 
   app.get(config.oauthRedirectPath, async (req, reply) => {
+    let stage = 'token_exchange';
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { token } = await (
         app as any
       ).twitchOAuth2.getAccessTokenFromAuthorizationCodeFlow(req);
 
+      stage = 'helix_lookup';
       const res = await fetch('https://api.twitch.tv/helix/users', {
         headers: {
           Authorization: `Bearer ${token.access_token}`,
@@ -52,6 +54,7 @@ export async function registerAuth(app: FastifyInstance): Promise<void> {
       const tu = body.data?.[0];
       if (!tu) throw new Error('no user returned from Twitch');
 
+      stage = 'db_upsert';
       const user = await prisma.user.upsert({
         where: { twitchId: tu.id },
         update: { login: tu.login, displayName: tu.display_name },
@@ -67,8 +70,8 @@ export async function registerAuth(app: FastifyInstance): Promise<void> {
       setSession(reply, user.id);
       reply.redirect('/');
     } catch (err) {
-      logger.error('[auth] callback failed:', (err as Error).message);
-      reply.redirect('/?error=login_failed');
+      logger.error(`[auth] callback failed at ${stage}:`, (err as Error).message);
+      reply.redirect(`/?error=login_failed&stage=${stage}`);
     }
   });
 

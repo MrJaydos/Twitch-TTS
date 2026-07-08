@@ -267,20 +267,45 @@
     });
   }
 
-  function showLogin() {
+  var STAGE_MESSAGES = {
+    token_exchange:
+      "Twitch didn't grant an access token. Double-check the client ID/secret and that the OAuth redirect URL is registered exactly.",
+    helix_lookup: "Logged in to Twitch, but couldn't fetch your profile from Twitch's API.",
+    db_upsert: "Logged in to Twitch, but the server couldn't save your account (database issue).",
+  };
+
+  function showLogin(errorMsg) {
     $("login").classList.remove("hidden");
+    var el = $("login-error");
+    if (errorMsg) {
+      el.textContent = errorMsg;
+      el.classList.remove("hidden");
+    } else {
+      el.classList.add("hidden");
+    }
+  }
+
+  function loginErrorFromQuery() {
+    var params = new URLSearchParams(location.search);
+    if (params.get("error") !== "login_failed") return null;
+    var stage = params.get("stage");
+    var msg = STAGE_MESSAGES[stage] || "Login failed. Check the server logs for details.";
+    // Drop the query params so a refresh/share doesn't repeat the stale error.
+    history.replaceState(null, "", location.pathname);
+    return msg;
   }
 
   async function init() {
+    var loginError = loginErrorFromQuery();
     var me;
     try {
       me = await api("/api/me");
     } catch (e) {
-      showLogin(); // API unreachable
+      showLogin(loginError); // API unreachable
       return;
     }
     if (!me.ok) {
-      showLogin();
+      showLogin(loginError);
       return;
     }
     var user = await me.json();

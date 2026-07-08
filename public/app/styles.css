@@ -80,6 +80,11 @@ a {
 .login-card p {
   margin: 0 0 24px;
 }
+.login-error {
+  margin: 16px 0 0;
+  color: var(--danger);
+  font-size: 14px;
+}
 .brand-mark {
   font-size: 44px;
   line-height: 1;
