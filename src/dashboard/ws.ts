@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type WebSocket from 'ws';
 import type { Hub, ActivityEntry } from '../core/hub';
 import { getUserId } from '../auth/session';
+import { startHeartbeat } from '../ws-heartbeat';
 
 /**
  * Authenticated dashboard WebSocket. Streams this user's activity log
@@ -27,5 +28,6 @@ export function registerDashboardWs(app: FastifyInstance, hub: Hub): void {
     hub.on('activity', listener);
     socket.on('close', () => hub.off('activity', listener));
     socket.on('error', () => hub.off('activity', listener));
+    startHeartbeat(socket);
   });
 }

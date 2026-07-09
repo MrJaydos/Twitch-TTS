@@ -3,6 +3,7 @@ import type WebSocket from 'ws';
 import type { Hub } from '../core/hub';
 import { prisma } from '../db';
 import { logger } from '../logger';
+import { startHeartbeat } from '../ws-heartbeat';
 
 /** Registers the overlay WebSocket route: /ws/overlay?token=... */
 export function registerOverlayWs(app: FastifyInstance, hub: Hub): void {
@@ -32,6 +33,7 @@ export function registerOverlayWs(app: FastifyInstance, hub: Hub): void {
       socket.on('close', () => hub.removeOverlay(user.id, socket));
       socket.on('error', () => hub.removeOverlay(user.id, socket));
       // Overlay is receive-only; ignore any inbound frames.
+      startHeartbeat(socket);
     },
   );
 }
