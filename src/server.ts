@@ -43,9 +43,12 @@ async function main(): Promise<void> {
   });
 
   // ── Static: overlay page (decorates reply.sendFile) ──
+  // prefix has no trailing slash so @fastify/static registers a 301 redirect
+  // from the bare /overlay (preserving ?token=...) to /overlay/ — the overlay
+  // URL handed out by /api/me has no trailing slash.
   await app.register(fastifyStatic, {
     root: path.join(PUBLIC_DIR, 'overlay'),
-    prefix: '/overlay/',
+    prefix: '/overlay',
     redirect: true,
     decorateReply: true,
   });
