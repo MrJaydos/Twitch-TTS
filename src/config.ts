@@ -33,7 +33,7 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-const env = parsed.data;
+const env = { ...parsed.data, PUBLIC_URL: parsed.data.PUBLIC_URL.replace(/\/+$/, '') };
 
 export const config = {
   ...env,
