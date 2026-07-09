@@ -27,6 +27,11 @@ export async function registerAuth(app: FastifyInstance): Promise<void> {
         tokenHost: 'https://id.twitch.tv',
         tokenPath: '/oauth2/token',
       },
+      // Twitch's token endpoint requires client_id/secret as POST body params;
+      // it doesn't accept the HTTP Basic Auth header simple-oauth2 sends by default.
+      options: {
+        authorizationMethod: 'body',
+      },
     },
     startRedirectPath: '/auth/twitch',
     callbackUri: config.oauthRedirectUrl,
