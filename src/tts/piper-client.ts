@@ -14,7 +14,8 @@ export interface SynthesizeOptions {
  */
 export async function synthesize(opts: SynthesizeOptions): Promise<Buffer> {
   const lengthScale = opts.rate && opts.rate > 0 ? 1 / opts.rate : 1;
-  const res = await fetch(`${config.PIPER_URL}/synthesize`, {
+  // Piper's bundled http_server registers synthesis at POST / (root), not /synthesize.
+  const res = await fetch(config.PIPER_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
