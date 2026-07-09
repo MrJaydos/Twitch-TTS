@@ -70,7 +70,15 @@ export async function registerAuth(app: FastifyInstance): Promise<void> {
       setSession(reply, user.id);
       reply.redirect('/');
     } catch (err) {
-      logger.error(`[auth] callback failed at ${stage}:`, (err as Error).message);
+      // simple-oauth2 (via @hapi/wreck) buries Twitch's actual error body here;
+      // err.message alone is just "Response Error: 400 Bad Request".
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const payload = (err as any)?.data?.data?.payload;
+      logger.error(
+        `[auth] callback failed at ${stage}:`,
+        (err as Error).message,
+        payload ? JSON.stringify(payload) : ''
+      );
       reply.redirect(`/?error=login_failed&stage=${stage}`);
     }
   });
