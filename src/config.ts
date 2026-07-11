@@ -17,6 +17,12 @@ const schema = z.object({
   DEFAULT_VOICE: z.string().default('en_US-amy-medium'),
   PIPER_VOICES: z.string().default('en_US-amy-medium'),
 
+  // Optional bot account used to reply to chat commands (e.g. !voice). When
+  // unset, the chat client stays anonymous/read-only and commands still apply
+  // but silently (no confirmation message).
+  TWITCH_BOT_USERNAME: z.string().default(''),
+  TWITCH_BOT_TOKEN: z.string().default(''),
+
   AUDIO_CACHE_DIR: z.string().default('/data/audio-cache'),
   AUDIO_TTL_SECONDS: z.coerce.number().int().positive().default(900),
 
@@ -49,6 +55,18 @@ export const config = {
     return env.PIPER_VOICES.split(',')
       .map((v) => v.trim())
       .filter(Boolean);
+  },
+  /** True when a bot account is configured to send chat replies. */
+  get botConfigured(): boolean {
+    return Boolean(env.TWITCH_BOT_USERNAME && env.TWITCH_BOT_TOKEN);
+  },
+  /** Bot login (lowercased) or null when no bot is configured. */
+  get botLogin(): string | null {
+    return env.TWITCH_BOT_USERNAME ? env.TWITCH_BOT_USERNAME.toLowerCase() : null;
+  },
+  /** Bot OAuth token without the `oauth:` prefix Twitch IRC expects us to add. */
+  get botToken(): string {
+    return env.TWITCH_BOT_TOKEN.replace(/^oauth:/i, '');
   },
 };
 

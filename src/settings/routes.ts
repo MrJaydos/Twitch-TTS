@@ -16,6 +16,7 @@ const settingsSchema = z
     roleGate: z.enum(['everyone', 'subs', 'vips', 'mods']),
     voice: z.string().max(80),
     uniqueVoices: z.boolean(),
+    voiceCommandEnabled: z.boolean(),
     rate: z.number().min(0.3).max(2.0),
     volume: z.number().min(0).max(1),
     maxLength: z.number().int().min(0).max(2000),

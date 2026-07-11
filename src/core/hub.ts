@@ -6,6 +6,11 @@ import { ChatManager } from '../twitch/chat-manager';
 import { filterMessage } from '../settings/filters';
 import { generateAudio, audioUrl } from '../tts/generate';
 import { VoiceAssignments } from '../tts/voice-assignments';
+import {
+  isVoiceCommand,
+  parseVoiceCommand,
+  voiceLabel,
+} from '../tts/voice-command';
 import { config } from '../config';
 import type {
   ChatMessage,
@@ -138,13 +143,78 @@ export class Hub extends EventEmitter {
 
   // ── chat → speech ─────────────────────────────────────────────────
   private onChat(m: ChatMessage): void {
+    // Ignore the bot's own replies so confirmations aren't read back aloud.
+    if (m.login && m.login === config.botLogin) return;
+
     const users = this.channelUsers.get(m.channel);
     if (!users || users.size === 0) return;
+
+    // A `!voice` command is consumed (not spoken) for every owner that has the
+    // command active; owners without it fall through to normal speaking.
+    if (isVoiceCommand(m.text)) {
+      const cmdOwners = this.voiceCommandOwners(users);
+      if (cmdOwners.size > 0) {
+        void this.handleVoiceCommand(m, cmdOwners);
+        for (const userId of users) {
+          if (!cmdOwners.has(userId)) void this.handleForUser(userId, m);
+        }
+        return;
+      }
+    }
+
     // Each overlay owner is handled independently so a slow voice lookup for
     // one doesn't hold up the others.
     for (const userId of users) {
       void this.handleForUser(userId, m);
     }
+  }
+
+  /** Owners listening to a channel that have the `!voice` command active. */
+  private voiceCommandOwners(users: Set<string>): Set<string> {
+    const out = new Set<string>();
+    for (const userId of users) {
+      const s = this.settings.get(userId);
+      if (s && s.enabled && s.uniqueVoices && s.voiceCommandEnabled) out.add(userId);
+    }
+    return out;
+  }
+
+  private async handleVoiceCommand(m: ChatMessage, owners: Set<string>): Promise<void> {
+    const pool = config.voiceList;
+    const labels = pool.map(voiceLabel).join(', ');
+    const cmd = parseVoiceCommand(m.text, pool);
+    const to = `@${m.displayName}`;
+
+    if (cmd.kind === 'help') {
+      this.chat.say(m.channel, `${to} Pick your TTS voice: !voice <name> · !voice random · !voice list. Options: ${labels}`);
+      return;
+    }
+    if (cmd.kind === 'list') {
+      this.chat.say(m.channel, `${to} Available voices: ${labels}`);
+      return;
+    }
+
+    let chosen: string | null;
+    if (cmd.kind === 'random') {
+      chosen = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+    } else {
+      chosen = cmd.voice;
+    }
+
+    if (!chosen) {
+      const tried = cmd.kind === 'set' ? `"${cmd.raw}" isn't a voice. ` : '';
+      this.chat.say(m.channel, `${to} ${tried}Available voices: ${labels}`);
+      return;
+    }
+
+    for (const userId of owners) {
+      try {
+        await this.voices.setVoice(userId, m.login, chosen);
+      } catch (err) {
+        logger.error('[hub] setVoice failed:', (err as Error).message);
+      }
+    }
+    this.chat.say(m.channel, `${to} Your TTS voice is now ${voiceLabel(chosen)} 🔊`);
   }
 
   private async handleForUser(userId: string, m: ChatMessage): Promise<void> {

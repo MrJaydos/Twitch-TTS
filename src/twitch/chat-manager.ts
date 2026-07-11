@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import WebSocket from 'ws';
+import { config } from '../config';
 import { logger } from '../logger';
 import type { ChatMessage } from '../core/types';
 import { parseLine } from './message';
@@ -7,11 +8,13 @@ import { parseLine } from './message';
 const TWITCH_WS = 'wss://irc-ws.chat.twitch.tv:443';
 
 /**
- * Anonymous, read-only Twitch chat client.
+ * Twitch chat client that joins many channels on a single connection, emits
+ * `message` for each PRIVMSG, and reconnects with backoff (re-joining channels
+ * automatically).
  *
- * Connects as `justinfan<random>` (no token required) and joins many channels
- * on a single connection. Emits `message` for each PRIVMSG and reconnects with
- * backoff, re-joining channels automatically.
+ * Connects anonymously as `justinfan<random>` (read-only) unless a bot account
+ * is configured, in which case it authenticates so it can also send replies via
+ * `say()` (used for chat commands like `!voice`).
  */
 export class ChatManager extends EventEmitter {
   private ws: WebSocket | null = null;
@@ -31,9 +34,15 @@ export class ChatManager extends EventEmitter {
     this.ws = ws;
 
     ws.on('open', () => {
-      logger.info('[chat] connected to Twitch IRC');
       ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
-      ws.send(`NICK ${nick}`);
+      if (config.botConfigured) {
+        logger.info(`[chat] connected to Twitch IRC as ${config.botLogin}`);
+        ws.send(`PASS oauth:${config.botToken}`);
+        ws.send(`NICK ${config.botLogin}`);
+      } else {
+        logger.info('[chat] connected to Twitch IRC (anonymous, read-only)');
+        ws.send(`NICK ${nick}`);
+      }
       this.connected = true;
       this.reconnectDelay = 1000;
       for (const ch of this.channels) ws.send(`JOIN #${ch}`);
@@ -70,7 +79,29 @@ export class ChatManager extends EventEmitter {
     }
     if (parsed.kind === 'privmsg') {
       this.emit('message', parsed.message as ChatMessage);
+      return;
     }
+    // Surface a bad bot token clearly instead of silently looping reconnects.
+    if (line.includes('Login authentication failed')) {
+      logger.error(
+        '[chat] bot login failed — check TWITCH_BOT_USERNAME/TWITCH_BOT_TOKEN (needs chat:read + chat:edit)',
+      );
+    }
+  }
+
+  /** Whether the client can send messages (a bot account is configured). */
+  get canSpeak(): boolean {
+    return this.connected && config.botConfigured;
+  }
+
+  /** Send a chat message to `channel`. No-op when running anonymously. */
+  say(channel: string, text: string): void {
+    if (!this.canSpeak) return;
+    const ch = channel.toLowerCase().replace(/^#/, '').trim();
+    if (!ch) return;
+    // Twitch drops messages with raw newlines; keep it to one safe line.
+    const line = text.replace(/[\r\n]+/g, ' ').slice(0, 450);
+    this.ws?.send(`PRIVMSG #${ch} :${line}`);
   }
 
   join(channel: string): void {

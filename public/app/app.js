@@ -10,6 +10,7 @@
   var BOOLS = [
     "enabled",
     "uniqueVoices",
+    "voiceCommandEnabled",
     "readUsername",
     "stripUrls",
     "stripEmotes",

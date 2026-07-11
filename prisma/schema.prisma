@@ -62,6 +62,10 @@ model Settings {
   // configured pool (PIPER_VOICES) instead of everyone sharing `voice`.
   uniqueVoices Boolean @default(false)
 
+  // When true (and uniqueVoices is on), chatters can pick their own voice with
+  // the `!voice` chat command. Turn off to disable the command/bot in chat.
+  voiceCommandEnabled Boolean @default(true)
+
   // Content shaping.
   maxLength    Int     @default(300)
   readUsername Boolean @default(false)

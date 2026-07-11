@@ -128,6 +128,8 @@ Visit <http://localhost:3000>. For local login, set the Twitch redirect URL to
 | Enabled                | Master on/off for reading chat.                                    |
 | Twitch channel         | Which channel's chat to read (defaults to your own).              |
 | Voice                  | Piper voice. The list comes from `PIPER_VOICES`.                  |
+| Unique voices          | Give each chatter their own consistent voice from the pool.       |
+| Let chatters pick       | Enable the `!voice` chat command (requires unique voices).        |
 | Trigger                | Read every message, or only messages starting with a prefix.      |
 | Prefix                 | The command prefix (e.g. `!tts`) when trigger = prefix.           |
 | Who can trigger        | everyone / subscribers+ / VIPs+ / moderators only.                |
@@ -150,6 +152,33 @@ and a live **Activity** feed of what's being read.
 Browse voices at <https://huggingface.co/rhasspy/piper-voices>. Add their names
 (e.g. `en_US-hfc_female-medium`) to `PIPER_VOICES`, comma-separated, and redeploy.
 The `piper` service downloads any that are missing on boot.
+
+---
+
+## Unique voices & the `!voice` command
+
+Turn on **Give each chatter their own voice** in Settings and every chatter is
+assigned a consistent voice from your `PIPER_VOICES` pool — the same person
+always sounds the same. Assignments are stored per chatter, so they survive
+restarts. The number of distinct voices is bounded by how many you list in
+`PIPER_VOICES`.
+
+With that on, **Let chatters pick with `!voice`** lets viewers choose their own:
+
+| Command          | Effect                                             |
+| ---------------- | -------------------------------------------------- |
+| `!voice <name>`  | Set your voice (e.g. `!voice amy`).                |
+| `!voice random`  | Get a random voice from the pool.                  |
+| `!voice list`    | List the available voices.                         |
+| `!voice help`    | Show usage.                                        |
+
+A chatter's explicit choice is locked and won't be reassigned. Uncheck the
+option to disable the command in your channel.
+
+**Confirmation replies** require a bot account: set `TWITCH_BOT_USERNAME` and
+`TWITCH_BOT_TOKEN` (a token with `chat:read` + `chat:edit`) on the server. Without
+one, the chat reader stays anonymous and `!voice` still applies the chosen voice
+— it just won't post a confirmation message.
 
 ---
 
