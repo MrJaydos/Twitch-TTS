@@ -5,7 +5,7 @@ import { prisma, getOrCreateSettings } from '../db';
 import { ChatManager } from '../twitch/chat-manager';
 import { filterMessage } from '../settings/filters';
 import { generateAudio, audioUrl } from '../tts/generate';
-import { pickVoice } from '../tts/voice-picker';
+import { VoiceAssignments } from '../tts/voice-assignments';
 import { config } from '../config';
 import type {
   ChatMessage,
@@ -36,6 +36,7 @@ export class Hub extends EventEmitter {
   private channelUsers = new Map<string, Set<string>>();
   private queues = new Map<string, QueueState>();
   private lastSpoke = new Map<string, number>(); // `${userId}:${chatterLogin}` -> ts
+  private voices = new VoiceAssignments();
   private chat: ChatManager;
 
   constructor(chat: ChatManager) {
@@ -139,37 +140,43 @@ export class Hub extends EventEmitter {
   private onChat(m: ChatMessage): void {
     const users = this.channelUsers.get(m.channel);
     if (!users || users.size === 0) return;
+    // Each overlay owner is handled independently so a slow voice lookup for
+    // one doesn't hold up the others.
     for (const userId of users) {
-      const s = this.settings.get(userId);
-      if (!s || !s.enabled) continue;
-
-      const result = filterMessage(s, m);
-      if (!result.ok) continue;
-
-      if (s.cooldownSeconds > 0) {
-        const key = `${userId}:${m.login}`;
-        const last = this.lastSpoke.get(key) ?? 0;
-        if (Date.now() - last < s.cooldownSeconds * 1000) continue;
-        this.lastSpoke.set(key, Date.now());
-      }
-
-      const voice = s.uniqueVoices
-        ? pickVoice(m.login, config.voiceList, s.voice)
-        : s.voice;
-
-      this.enqueue(userId, {
-        text: result.spoken,
-        voice,
-        rate: s.rate,
-        caption: s.captionsEnabled ? { name: m.displayName, text: result.caption } : null,
-      });
-      this.emitActivity(userId, {
-        time: Date.now(),
-        type: 'spoken',
-        name: m.displayName,
-        text: result.caption,
-      });
+      void this.handleForUser(userId, m);
     }
+  }
+
+  private async handleForUser(userId: string, m: ChatMessage): Promise<void> {
+    const s = this.settings.get(userId);
+    if (!s || !s.enabled) return;
+
+    const result = filterMessage(s, m);
+    if (!result.ok) return;
+
+    if (s.cooldownSeconds > 0) {
+      const key = `${userId}:${m.login}`;
+      const last = this.lastSpoke.get(key) ?? 0;
+      if (Date.now() - last < s.cooldownSeconds * 1000) return;
+      this.lastSpoke.set(key, Date.now());
+    }
+
+    const voice = s.uniqueVoices
+      ? await this.voices.resolve(userId, m.login, config.voiceList, s.voice)
+      : s.voice;
+
+    this.enqueue(userId, {
+      text: result.spoken,
+      voice,
+      rate: s.rate,
+      caption: s.captionsEnabled ? { name: m.displayName, text: result.caption } : null,
+    });
+    this.emitActivity(userId, {
+      time: Date.now(),
+      type: 'spoken',
+      name: m.displayName,
+      text: result.caption,
+    });
   }
 
   // ── queue ─────────────────────────────────────────────────────────

@@ -19,6 +19,23 @@ model User {
   overlayToken String    @unique @default(cuid())
   createdAt    DateTime  @default(now())
   settings     Settings?
+  chatterVoices ChatterVoice[]
+}
+
+// Per-chatter voice assignment for a given streamer (overlay owner). Populated
+// lazily when `uniqueVoices` is on; `locked` marks a voice the chatter chose
+// explicitly (e.g. via a future `!voice` command) so auto-assignment leaves it.
+model ChatterVoice {
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  // Chatter's Twitch login (lowercase).
+  login     String
+  voice     String
+  locked    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([ownerId, login])
 }
 
 model Settings {

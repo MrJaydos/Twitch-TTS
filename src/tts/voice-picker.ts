@@ -1,6 +1,7 @@
 /**
  * Deterministically maps a chatter to one voice from a pool, so the same
- * person always sounds the same without persisting any per-user state.
+ * person always sounds the same. Used as the initial assignment strategy for
+ * a chatter that has no persisted voice yet (see voice-assignments.ts).
  */
 
 /** FNV-1a 32-bit hash — small, stable, and dependency-free. */
