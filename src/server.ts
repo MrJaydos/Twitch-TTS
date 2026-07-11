@@ -39,7 +39,11 @@ async function main(): Promise<void> {
   registerDashboardWs(app, hub);
 
   app.get('/healthz', async (_req, reply) => {
-    reply.send({ ok: true, piper: await piperHealthy() });
+    // Return 503 when Piper (the TTS engine) is unreachable so container health
+    // checks / uptime monitors actually flag a broken deploy, not just a dead
+    // web server.
+    const piper = await piperHealthy();
+    reply.code(piper ? 200 : 503).send({ ok: piper, piper });
   });
 
   // ── Static: overlay page (decorates reply.sendFile) ──

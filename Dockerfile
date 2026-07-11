@@ -37,4 +37,11 @@ COPY docker/app-entrypoint.sh /app-entrypoint.sh
 RUN chmod +x /app-entrypoint.sh
 
 EXPOSE 3000
+
+# Report container health from /healthz (503 when Piper is down). Uses Node
+# since the slim image has no curl. Generous start period: first boot runs
+# prisma db push and downloads Piper voices, which can take a minute.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
 ENTRYPOINT ["/app-entrypoint.sh"]
