@@ -5,6 +5,8 @@ import { prisma, getOrCreateSettings } from '../db';
 import { ChatManager } from '../twitch/chat-manager';
 import { filterMessage } from '../settings/filters';
 import { generateAudio, audioUrl } from '../tts/generate';
+import { pickVoice } from '../tts/voice-picker';
+import { config } from '../config';
 import type {
   ChatMessage,
   OverlayServerMessage,
@@ -151,9 +153,13 @@ export class Hub extends EventEmitter {
         this.lastSpoke.set(key, Date.now());
       }
 
+      const voice = s.uniqueVoices
+        ? pickVoice(m.login, config.voiceList, s.voice)
+        : s.voice;
+
       this.enqueue(userId, {
         text: result.spoken,
-        voice: s.voice,
+        voice,
         rate: s.rate,
         caption: s.captionsEnabled ? { name: m.displayName, text: result.caption } : null,
       });

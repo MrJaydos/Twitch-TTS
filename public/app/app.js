@@ -9,6 +9,7 @@
   // Fields that map 1:1 to the Settings model.
   var BOOLS = [
     "enabled",
+    "uniqueVoices",
     "readUsername",
     "stripUrls",
     "stripEmotes",

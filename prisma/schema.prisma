@@ -41,6 +41,10 @@ model Settings {
   rate   Float  @default(1.0)
   volume Float  @default(1.0)
 
+  // When true, each chatter is deterministically assigned a voice from the
+  // configured pool (PIPER_VOICES) instead of everyone sharing `voice`.
+  uniqueVoices Boolean @default(false)
+
   // Content shaping.
   maxLength    Int     @default(300)
   readUsername Boolean @default(false)
